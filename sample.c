@@ -11,7 +11,6 @@
 //やるべきこと
 //鏡のロックパス
 //ハイアンドロー
-//アイテムのコメント
 //17fの具体的なプログラム
 
 int kbhit();
@@ -24,6 +23,8 @@ void updateTime();
 void toRules();
 void showFloor(int fl_num);
 void showCollection();
+
+void playHiAndLow();
 
 void loadFloorData();
 void setFloorData(int fl_num,int pattern);
@@ -41,6 +42,10 @@ int getToiretIn(int fl_num, int x, int y);
 int getToiretWarp(int fl_num, int x, int y);
 int getToiretLock(int fl_num, int x, int y);
 int getToiretNumber(int x, int y);
+
+int generateProbability(int percent);
+void changePlayerNum();
+int GetRandom(int min,int max);
 
 void checkEvent();
 void checkItem();
@@ -105,8 +110,12 @@ typedef struct{
 
 int total_point;
 int scene;
+
 int now_floor;
+//ゴールのイベントにはいるかどうか
 int goal_flag;
+//おじさんにかったかどうか
+int ojisan_flag;
 
 //時間関係で使うもの
 time_t start, end;
@@ -114,6 +123,10 @@ int limit_time;
 int second, minute;
 int sec_count;
 int f17_flag;
+//ハイアンドローで使用するもの
+int dealer_num;
+int player_num;
+int test_hl;
 
 char ma1[12] = "x";
 char ma2[12] = "x";
@@ -129,9 +142,10 @@ Items itm[23];
 //いま居る座標が何かを覚えておく
 char map_tmp[64];
 
-int main(void)
-{
+int main(void){
   char c ;
+  //乱数をしっかり発生させるおまじない
+  srand((int)time(NULL));
 
   system("clear");
   loadFloorData();
@@ -145,6 +159,7 @@ int main(void)
       clearHasItem();
       limit_time = 0;
       f17_flag = 0;
+      ojisan_flag = 0;
       somm.now_floor = 1;
       clearFloor();
       setSommelier(somm.now_floor);
@@ -170,32 +185,40 @@ int main(void)
           if(c == 'z'){
             break;
           }
-          if(goal_flag == 1){
-            //getchar();
-            end = time(NULL);
-            toGoal();
-            goal_flag = 0;
-            main();
-            break;
-          }
-          if(limit_time>900){
-            end = time(NULL);
-            toGoal();
-	          printf("ばっかもーーーーん！遅い！なーにをもたもたしとるんじゃ！こんなんでは日が暮れてしまうじゃろ！まあよい、また明日出直してくるんじゃな。");
-	          break;
-          }
+
           else{
             //system("clear");
             //showFloor(somm.now_floor);
             //printf("now x:%d now y:%d\n", somm.now_x, somm.now_y);
             //printf("pre x:%d pre y:%d\n", somm.pre_x, somm.pre_y);
           }
+          system("clear");
+          showFloor(somm.now_floor);
         }
-        system("clear");
-        showFloor(somm.now_floor);
+
+        //system("clear");
+        //showFloor(somm.now_floor);
+
         //printf("now x:%d now y:%d\n", somm.now_x, somm.now_y);
         //printf("pre x:%d pre y:%d\n", somm.pre_x, somm.pre_y);
 
+        if(limit_time > 900) goal_flag = 1;
+        //17fの落とし穴
+        if(somm.now_floor == 17){
+          if(somm.now_x == 3 && somm.now_y == 5) goal_flag = 1;
+          if(somm.now_x == 4 && somm.now_y == 5) goal_flag = 1;
+          if(somm.now_x == 6 && somm.now_y == 5) goal_flag = 1;
+          if(somm.now_x == 5 && somm.now_y == 7) goal_flag = 1;
+          if(somm.now_x == 7 && somm.now_y == 7) goal_flag = 1;
+        }
+        if(goal_flag == 1){
+          //getchar();
+          end = time(NULL);
+          toGoal();
+          goal_flag = 0;
+          main();
+          break;
+        }
         //時間を更新
         updateTime();
         usleep(62500);
@@ -209,6 +232,7 @@ int main(void)
 
     case 3:
       getchar();
+      clearHasItem();
       showCollection();
       main();
       break;
@@ -217,8 +241,6 @@ int main(void)
       printf("\n Thank u 4 playing... Bye.....\n\n\n");
       break;
 
-//    case 10:
-      //toTest();
   }
   return 0;
 }
@@ -271,13 +293,20 @@ void toTitle(){
 
 void toOpening(){
   printf("\n\n\n");
-  printf("私は名乗る程のものでは無い...\n\n\n");
+  printf("・・・2018年.4月　トイレのソムリエがＫ研究所に就職した・・・\n\n\n");
   getchar();
   getchar();
-  printf("しかし人は皆、口を揃えて私をこう呼ぶ...\n\n\n");
+  printf("与えられた初めての仕事、それは・・・\n\n\n");
   getchar();
-  printf("『トイレの");
-  printf("ソムリエ』と....\n\n\n");
+  printf("『トイレの修理』\n\n\n");
+  getchar();
+  printf("　！？　と思ったそこのあなた。\n\n\n");
+  getchar();
+  printf("細かいことは気にせず\n\n\n");
+  getchar();
+  printf("とりあえずやってみよ？\n\n\n");
+  getchar();
+  printf("今、ソムリエのプライドをかけた完璧なトイレ作りの旅が始まる...\n\n\n\n");
   getchar();
 }
 
@@ -334,11 +363,11 @@ void updateTime(){
   if(second>=60){
     second = 0;
   }
-  if(limit_time>5 && f17_flag ==0){
+  if(limit_time>600 && f17_flag ==0){
       f17_flag = 1;
-      printf("  何か大きな音がした...どこかの個室が空いたのだろうか...\n");
-      printf("  (Press enter key)");
-      getchar();
+      printf("  11階から大きな音がした...あの窪みだろうか...  ");
+      printf("(Press enter key)");
+      //getchar();
   }
   if(second<50){
     sprintf(map_frame[1][10], " Deadline %d : %d  Total(%d)", 14-minute,59-second,limit_time);
@@ -558,6 +587,8 @@ void clearHasItem(){
   int i;
   for (i = 0; i < total_itm; i++) {
     itm[i].has_itm = 0;
+    //itm[i].had_itm = 1;
+
   }
   strcpy(ma1,"x");
   strcpy(ma2,"x");
@@ -848,7 +879,7 @@ int getToiretNumber(int x, int y){
 //今いる座標にイベントがあるか判定する.
 void checkEvent(){
   //エレベーターの時
-  if(somm.now_x == 3 && somm.now_y == 8) {
+  if(somm.now_x == 3 && somm.now_y == 8 && somm.now_floor != 17) {
     toElevate();
   }
   //ワープするトイレの時
@@ -908,17 +939,66 @@ void checkEvent(){
   }
   //おじさんと戦闘
   if(somm.now_x == 6 && somm.now_y == 6 && somm.now_floor == 7) {
+    char c[5];
+    if(ojisan_flag == 0){
+      system("clear");
+      showFloor(somm.now_floor);
+      printf("  おじさん「なぁ、ハイアンドローがしたくてたまらないんだ.....」");
+      getchar();
+
+      system("clear");
+      showFloor(somm.now_floor);
+      printf("  おじさん「付き合ってもらえないか？」(y/n) : ");
+      while(1){
+        scanf("%s",c);
+        if(strcmp(c,"y")==0){
+          system("clear");
+          showFloor(somm.now_floor);
+          printf("  おじさん「そうかそうか...さっそく始めるぞ！！」\n");
+          getchar();
+          getchar();
+          playHiAndLow();
+          break;
+        }
+        else if(strcmp(c,"n")==0){
+          system("clear");
+          showFloor(somm.now_floor);
+          printf("  おじさん「あとで後悔しても知らないぞ......」\n");
+          getchar();
+          getchar();
+          break;
+        }
+        else{
+          system("clear");
+          showFloor(somm.now_floor);
+          printf("  Please type 'y' or 'n' key \n");
+          getchar();
+        }
+      }
+      return;
+    }
+    if(ojisan_flag == -1){system("clear");
+      showFloor(somm.now_floor);
+      printf("  おじさん「あまり再戦を挑むなよ..弱く見えるぞ？」\n");
+      printf("  おじさん「...まずは私からカードを切ろう...」");
+      getchar();
+      playHiAndLow();
+      return;
+    }
+  }
+  //おじさんがいたところ
+  if(somm.now_x == 6 && somm.now_y == 5 && somm.now_floor == 7) {
     system("clear");
     showFloor(somm.now_floor);
-    printf("おじさんとハイアンドロー");
+    printf("  おじさんがここに居たと...いつから錯覚していたのだろうか...\n");
     getchar();
   }
-
+  //隠し扉イベント
   if(somm.now_x == 7 && somm.now_y == 5 && somm.now_floor == 11) {
     if (f17_flag == 1) {
       system("clear");
       showFloor(somm.now_floor);
-      printf("  隠し扉だ！！入りますか？(y/n)\n");
+      printf("  こんな場所に隠し扉が！！入りますか？(y/n) : ");
       char c = getchar();
       if(c == 'y'){
         to17f();
@@ -926,23 +1006,244 @@ void checkEvent(){
     }else{
       system("clear");
       showFloor(somm.now_floor);
-      printf("  なんだこの違和感は.....？\n");
+      printf("  なんだこの違和感は.....？ ");
       getchar();
     }
   }
+  //鏡ロックイベント
+  if(somm.now_x == 3 && somm.now_y == 6 && somm.now_floor == 5){
+    char mirr[50];
+    if(itm[21].has_itm == 1){
+      showFloor(somm.now_floor);
+      printf("  既に鏡のトリックは見抜いている...\n");
+      getchar();
+    }
+    else{
+      showFloor(somm.now_floor);
+      printf("  鏡に細工がしてある・・・文字を入力出来るみたいだ \n");
+      printf("  「豚が離婚する時に食べるお菓子はなに？」 \n");
+      printf("  入力キー :  ");
+      scanf("%s",mirr);
+      if(strcmp(mirr, "とんがりコーン") == 0 || strcmp(mirr, "トンガリコーン") == 0){
+        printf("  正解！\n");
+        getchar();
+        showFloor(somm.now_floor);
+        printf("  カレンダーを手に入れた\n");
+        getchar();
+        itm[21].has_itm = 1;
+        itm[21].had_itm = 1;
+      }else{
+        printf("  不正解！\n");
+        getchar();
+        getchar();
+      }
+    }
+  }
+
+}
+//ハイアンドロー
+void playHiAndLow(){
+
+  int itm_p = 0;
+
+	char test[64];
+  system("clear");
+  showFloor(somm.now_floor);
+  if(ojisan_flag != -1){
+  printf("  ~ルール説明~\n");
+	printf("   もっている必須アイテムの個数で勝率が変わります\n");
+  printf("   初めにソムリエとおじさんに１～１４の数字が配られます。\n");
+  printf("   おじさんの数字だけが見えるようになり、その数字より\n");
+  printf("   自分の数字が大きいか小さいかを当てるゲームです。 \n");
+
+  getchar();
+  }
+  //アイテムをどれだけもってるか確認
+  //便座
+  if (itm[0].has_itm ==1) {
+    itm_p++;
+  }
+  //タンク
+  if (itm[3].has_itm ==1) {
+    itm_p++;
+  }
+  //トイレットペーパー
+  if (itm[12].has_itm ==1) {
+    itm_p++;
+  }
+  //テスト用 とりあえず勝ちたいときに
+  //itm_p=3;
+  system("clear");
+  showFloor(somm.now_floor);
+	switch(itm_p){
+			//アイテムが0個
+			case 0:
+				dealer_num = GetRandom(4,10);
+				player_num = GetRandom(1,14);
+        //プレイヤーが判断
+        printf("  おじさん「私は%dを引いたぞ...どうするかい？」\n",dealer_num);
+        printf("  High なら'1'Low なら'0'を入力してください : ");
+        scanf("%s", test);
+        test_hl = atoi(test);
+				//lowを選んだ時
+				if(test_hl == 0){
+					if(player_num < dealer_num){
+						if(generateProbability(99) == 1){
+							changePlayerNum();
+						}
+						if(player_num < dealer_num){
+							ojisan_flag=1;
+
+						}
+					}
+				}
+				//highを選んだ時
+				if(test_hl == 1){
+					if(player_num > dealer_num){
+						if(generateProbability(99) == 1){
+							changePlayerNum();
+						}
+						if(player_num > dealer_num){
+							ojisan_flag=1;
+						}
+					}
+				}
+				break;
+
+			case 1:
+				dealer_num = GetRandom(6,8);
+				player_num = GetRandom(1,14);
+        printf("  おじさん「私は%dを引いたぞ...どうするかい？」\n",dealer_num);
+        printf("  High なら'1'Low なら'0'を入力してください : ");
+        scanf("%s", test);
+        test_hl = atoi(test);
+				//lowを選んだ時
+					if(test_hl == 0){
+						if(player_num < dealer_num){
+							if(generateProbability(70) == 1){
+								changePlayerNum();
+							}
+							if(player_num < dealer_num){
+								ojisan_flag=1;
+							}
+						}
+					}
+					//highを選んだ時
+					if(test_hl == 1){
+						if(player_num > dealer_num){
+							if(generateProbability(70) == 1){
+								changePlayerNum();
+							}
+							if(player_num > dealer_num){
+								ojisan_flag=1;
+							}
+						}
+					}
+					break;
+
+			case 2:
+				dealer_num = GetRandom(10,14);
+				if (generateProbability(50) == 1)	dealer_num = GetRandom(1,5);
+				player_num = GetRandom(1,14);
+        printf("  おじさん「私は%dを引いたぞ...どうするかい？」\n",dealer_num);
+        printf("  High なら'1'Low なら'0'を入力してください : ");
+        scanf("%s", test);
+        test_hl = atoi(test);
+				//lowを選んだ時
+				if(test_hl == 0){
+					if(player_num < dealer_num){
+						if(generateProbability(50) == 1){
+							changePlayerNum();
+						}
+					if(player_num < dealer_num){
+							ojisan_flag=1;
+						}
+					}
+				}
+				//highを選んだ時
+				if(test_hl == 1){
+					if(player_num > dealer_num){
+						if(generateProbability(50) == 1){
+							changePlayerNum();
+						}
+						if(player_num > dealer_num){
+							ojisan_flag=1;
+						}
+					}
+				}
+				break;
+
+			case 3:
+				dealer_num = GetRandom(11,14);
+				if (generateProbability(50) == 1)	dealer_num = GetRandom(1,4);
+				player_num = GetRandom(1,12);
+        //プレイヤーが判断
+        printf("  おじさん「私は%dを引いたぞ...どうするかい？」\n",dealer_num);
+        printf("  High なら'1'Low なら'0'を入力してください : ");
+        scanf("%s", test);
+        test_hl = atoi(test);
+				if(test_hl == 0){
+					if(player_num < dealer_num){
+						ojisan_flag=1;
+					}else{}
+				}else{
+					if(player_num > dealer_num){
+						ojisan_flag=1;
+					}else{}
+				}
+				break;
+
+			default:
+				break;
+		}
+  system("clear");
+  showFloor(somm.now_floor);
+  printf("  ソムリエ　: %d\n  おじさん  : %d \n", player_num,dealer_num);
+  if(player_num == dealer_num){
+    getchar();
+    printf("  おじさん「引き分けか...運の良い奴だな...」");
+    getchar();
+    return;
+  }
+  if(ojisan_flag ==1) {
+    printf("  おじさん「私は...なにを...？」\n");
+    printf("  おじさん「これが...そうか...この掌にあるものが...」\n");
+    getchar();
+    getchar();
+    itm[6].has_itm =1;
+    itm[6].had_itm =1;
+    system("clear");
+    showFloor(somm.now_floor);
+    printf("  \" 便器 \" を手に入れた\n");
+    ojisan_flag = 1;
+    strcpy(toiret[6][3].toi_comment,"おじさんの霊圧が消えた...？");
+    toiret[6][3].locked = 0;
+
+    getchar();
+  }
+  else{
+    printf("  おじさん「また勝ってしまった...故にHigh&Low...」\n");
+    strcpy(toiret[6][3].toi_comment,"おじさんがこちらをジッと見つめている");
+    ojisan_flag = -1;
+    getchar();
+    getchar();
+  }
+
 }
 
 //今いる座標にアイテムがあるか判定する.
 void checkItem(){
   int i;
+  int j = 0; // アイテムを拾ったか拾ってないか
   int x = somm.now_x-3;
   int y = -(somm.now_y-8);
   for (i = 0; i < total_itm; i++) {
     if (itm[i].itm_x == x && itm[i].itm_y == y && itm[i].itm_z == somm.now_floor-1 ) {
-      if(itm[i].has_itm !=1){
+      if(itm[i].has_itm !=1&& i != 21){
         system("clear");
         showFloor(somm.now_floor);
         printf("   \" %s \" を手に入れた ... (Press enter key)\n",itm[i].itm_name);
+        j = 1;
         itm[i].has_itm = 1;
         itm[i].had_itm = 1;
         //ドライバーを手に入れ時に開放
@@ -970,14 +1271,21 @@ void checkItem(){
         getchar();
         break;
       }
-      /*
-    }else{
+    }
+  }
+  if(j == 0 && strcmp(map_tmp,"◇  ")!=0 && strcmp(map_tmp,"⋅  ")!=0){
+    system("clear");
+    showFloor(somm.now_floor);
+    printf("  使えそうなアイテムはなさそうだ...\n");
+    getchar();
+  }
+  //17fの例外
+  if(somm.now_floor ==17 && j == 0 ){
+    if(somm.now_x != 3 || somm.now_y!= 8){
       system("clear");
       showFloor(somm.now_floor);
-      printf("   アイテムは見つからない...");
+      printf("  使えそうなアイテムはなさそうだ...\n");
       getchar();
-      break;
-      */
     }
   }
   if(itm[3].has_itm == 1) strcpy(ma1,"⦿");
@@ -990,22 +1298,28 @@ void checkItem(){
 }
 
 //今いる座標が鏡の場合にコメントを表示する
-
 void checkMirrorComment(){
   int x = somm.now_x-3;
   int y = -(somm.now_y-8);
   if(strcmp(map_tmp,"◇  ") == 0){
+    //カレンダーのときスルーしたい
+    if(x == 0 && y == 2 &&
+      mirror[somm.now_floor-1][1].mirr_x == x && mirror[somm.now_floor-1][1].mirr_y == y ){
+      return;
+    }
     if(mirror[somm.now_floor-1][0].mirr_x == x && mirror[somm.now_floor-1][0].mirr_y == y){
       system("clear");
       showFloor(somm.now_floor);
       printf("   %s",mirror[somm.now_floor-1][0].mirr_comment);
       getchar();
-    }else{
+    }
+    else{
       system("clear");
       showFloor(somm.now_floor);
       printf("   %s",mirror[somm.now_floor-1][1].mirr_comment);
       getchar();
     }
+
   }
 }
 
@@ -1087,7 +1401,10 @@ void toGoal(){
   }
 
   printf("よく来てくれた！トイレのソムリエよ！\n");
-  if(itm[20].has_itm == 1){
+  if(limit_time>900){
+    printf("ばっかもーーーーん！遅い！なーにをもたもたしとるんじゃ！こんなんでは日が暮れてしまうじゃろ！まあよい、また明日出直してくるんじゃな。\n");
+  }
+  else if(itm[20].has_itm == 1){
   printf("おお！このトイレは私好みだ！私の大好きなギャル物のAVがあるじゃないか！\n君はこの会社にとどまるのは惜しい！T〇T〇に就職するべきだよ！これからもより良いトイレを作ってくれよ！\n");//AVget
   }
   else if(itm[0].has_itm == 1 && itm[3].has_itm == 1 && itm[6].has_itm == 1 && itm[12].has_itm == 1){
@@ -1140,7 +1457,7 @@ void setToiCommLock(){
   strcpy(toiret[4][4].toi_comment,"ハンマーがあれば入れそうだ・・・・");
   toiret[4][4].locked = 1;
   //5Fここまで
-  strcpy(toiret[5][1].toi_comment,"誰かは言っていて開けられない！！");
+  strcpy(toiret[5][1].toi_comment,"誰か入っていて開けられない！！");
   toiret[5][1].locked = 1;
 
   strcpy(toiret[5][3].toi_comment,"このトイレまじ臭え...必要なアイテムはなさそうだ");
@@ -1218,6 +1535,9 @@ void setItem(){
   itm[1].itm_x = 4;
   itm[1].itm_y = 3;
   itm[1].itm_z = 1;
+  strcpy(itm[1].comm1,"ネジを回すことが出来る工具");
+  strcpy(itm[1].comm2,"実はマイナス型やプラス型だけではなく");
+  strcpy(itm[1].comm3,"星型、Y字型、三角形など種類が豊富である");
   //2F.item
   strcpy(itm[22].itm_name,"便座カバー");
   itm[22].point = 7;
@@ -1225,6 +1545,9 @@ void setItem(){
   itm[22].itm_x = 4;
   itm[22].itm_y = 0;
   itm[22].itm_z = 3;
+  strcpy(itm[22].comm1,"その名の通り便座に付けるカバー");
+  strcpy(itm[22].comm2,"便座が程よく暖かくなるようになってから");
+  strcpy(itm[22].comm3,"少し存在感が薄くなっているのが悩みどころ");
   //4F.item
   strcpy(itm[2].itm_name,"紙やすり");
   itm[2].point = 2;
@@ -1232,6 +1555,9 @@ void setItem(){
   itm[2].itm_x = 4;
   itm[2].itm_y = 3;
   itm[2].itm_z = 5;
+  strcpy(itm[2].comm1,"木材や金属に擦って使用する");
+  strcpy(itm[2].comm2,"もしトイレットペーパーがない場合に");
+  strcpy(itm[2].comm3,"紙やすりを使うかどうかは議論が必要である");
 
   strcpy(itm[3].itm_name,"タンク");
   itm[3].point = 0;
@@ -1239,6 +1565,9 @@ void setItem(){
   itm[3].itm_x = 3;
   itm[3].itm_y = 1;
   itm[3].itm_z = 4;
+  strcpy(itm[3].comm1,"メインアイテムの一つ");
+  strcpy(itm[3].comm2,"水の入ったペットボトルを入れれば");
+  strcpy(itm[3].comm3,"流水量を調整可能で節水ブームの火付け役");
 
   strcpy(itm[21].itm_name,"カレンダー");
   itm[21].point = 0;
@@ -1246,6 +1575,9 @@ void setItem(){
   itm[21].itm_x = 0;
   itm[21].itm_y = 2;
   itm[21].itm_z = 4;
+  strcpy(itm[21].comm1,"今日が何日か分かる一品");
+  strcpy(itm[21].comm2,"家庭のトイレに貼ったりすると");
+  strcpy(itm[21].comm3,"両親の誕生日や記念日が確認出来ることも");
 
   //
   strcpy(itm[4].itm_name,"消臭スプレー");
@@ -1254,6 +1586,9 @@ void setItem(){
   itm[4].itm_x = 3;
   itm[4].itm_y = 3;
   itm[4].itm_z = 5;
+  strcpy(itm[4].comm1,"1PUSHで嫌な匂いとおさらば出来る");
+  strcpy(itm[4].comm2,"間違っても人の口に使用してはいけないが");
+  strcpy(itm[4].comm3,"驚くことに犬用の口腔消臭スプレーは存在する");
 
   strcpy(itm[5].itm_name,"ブラシ");
   itm[5].point = 2;
@@ -1261,6 +1596,9 @@ void setItem(){
   itm[5].itm_x = 4;
   itm[5].itm_y = 0;
   itm[5].itm_z = 5;
+  strcpy(itm[5].comm1,"トイレの清掃用具といえばコレ");
+  strcpy(itm[5].comm2,"清掃後に濡れたまま戻してしまいがち");
+  strcpy(itm[5].comm3,"次回カビだらけというサプライズが待っている");
   //6F.item
   strcpy(itm[6].itm_name,"便器");
   itm[6].point = 0;
@@ -1268,6 +1606,10 @@ void setItem(){
   itm[6].itm_x = 3;
   itm[6].itm_y = 3;
   itm[6].itm_z = 6;
+  strcpy(itm[6].comm1,"メインアイテムの一つ");
+  strcpy(itm[6].comm2,"これ無しでトイレを語ることは出来ない");
+  strcpy(itm[6].comm3,"日本の小学校の洋式導入率は約４０％未満");
+
   //7.item
   strcpy(itm[7].itm_name,"壁紙");
   itm[7].point = 2;
@@ -1275,13 +1617,19 @@ void setItem(){
   itm[7].itm_x = 3;
   itm[7].itm_y = 4;
   itm[7].itm_z = 6;
+  strcpy(itm[7].comm1,"補強と装飾とをかけて壁に貼る紙。");
+  strcpy(itm[7].comm2,"壁紙の後ろにお金を隠し");
+  strcpy(itm[7].comm3,"脱税する人が後を絶たない");
   //7F.item
-  strcpy(itm[8].itm_name,"人形");
+  strcpy(itm[8].itm_name,"日本人形");
   itm[8].point = -5;
   itm[8].main_itm = 0;
   itm[8].itm_x = 0;
   itm[8].itm_y = 3;
   itm[8].itm_z = 7;
+  strcpy(itm[8].comm1,"日本の伝統的な風俗を移した人形");
+  strcpy(itm[8].comm2,"リカちゃん人形とは親友であり");
+  strcpy(itm[8].comm3,"永遠のライバル");
 
   strcpy(itm[9].itm_name,"トイレマット");
   itm[9].point = 2;
@@ -1289,6 +1637,9 @@ void setItem(){
   itm[9].itm_x = 4;
   itm[9].itm_y = 3;
   itm[9].itm_z = 7;
+  strcpy(itm[9].comm1,"トイレ内に敷くマット");
+  strcpy(itm[9].comm2,"選択は２週間に一度程度でよい");
+  strcpy(itm[9].comm3,"抗菌仕様");
   //8F.item
   strcpy(itm[10].itm_name,"芳香剤");
   itm[10].point = 2;
@@ -1296,13 +1647,21 @@ void setItem(){
   itm[10].itm_x = 0;
   itm[10].itm_y = 3;
   itm[10].itm_z = 8;
+  strcpy(itm[10].comm1,"悪臭をマスキングする剤");
+  strcpy(itm[10].comm2,"芳香剤と消臭剤は違う");
+  strcpy(itm[10].comm3,"ラベンダーの香り");
 
-  strcpy(itm[11].itm_name,"漫画");
+  strcpy(itm[11].itm_name,"週刊少年JAMP");
   itm[11].point = 2;
   itm[11].main_itm = 0;
   itm[11].itm_x = 2;
   itm[11].itm_y = 1;
   itm[11].itm_z = 8;
+  strcpy(itm[11].comm1,"男性向け週刊誌主にアダルトな面は少ない");
+  strcpy(itm[11].comm2,"連載中作品の「To LOVEる」は");
+  strcpy(itm[11].comm3,"男子小学生に夢を与える");
+
+
   //9F.item
   strcpy(itm[12].itm_name,"トイレットペーパー");
   itm[12].point = 0;
@@ -1310,27 +1669,43 @@ void setItem(){
   itm[12].itm_x = 4;
   itm[12].itm_y = 0;
   itm[12].itm_z = 9;
+  strcpy(itm[12].comm1,"メインアイテムの一つ");
+  strcpy(itm[12].comm2,"水で溶ける紙");
+  strcpy(itm[12].comm3,"横幅114ｍｍに統一されている");
+
   //10F.item
-  strcpy(itm[13].itm_name,"スリッパ");
+  strcpy(itm[13].itm_name,"トイレ用スリッパ");
   itm[13].point = 2;
   itm[13].main_itm = 0;
   itm[13].itm_x = 1;
   itm[13].itm_y = 3;
   itm[13].itm_z = 10;
+  strcpy(itm[13].comm1,"足の前側部分のみを覆う履き物");
+  strcpy(itm[13].comm2,"来客の際には必須といえる");
+  strcpy(itm[13].comm3,"履いたまま出てきてしまう人は多い");
 
-  strcpy(itm[14].itm_name,"ハンドソープ");
+
+  strcpy(itm[14].itm_name,"泡ハンドソープ");
   itm[14].point = 2;
   itm[14].main_itm = 0;
   itm[14].itm_x = 2;
   itm[14].itm_y = 0;
   itm[14].itm_z = 10;
+  strcpy(itm[14].comm1,"手を洗う際に使用する");
+  strcpy(itm[14].comm2,"指の間までモミモミ");
+  strcpy(itm[14].comm3,"することが重要な使用用法");
+
   //11F.item
-  strcpy(itm[15].itm_name,"絵画");
+  strcpy(itm[15].itm_name,"バニーガール");
   itm[15].point = 2;
   itm[15].main_itm = 0;
   itm[15].itm_x = 0;
   itm[15].itm_y = 2;
   itm[15].itm_z = 12;
+  strcpy(itm[15].comm1,"トイレ用のホステス");
+  strcpy(itm[15].comm2,"トイレットペーパーを切り取る");
+  strcpy(itm[15].comm3,"大切な役割を果たす");
+
 
   strcpy(itm[16].itm_name,"灰皿");
   itm[16].point = 2;
@@ -1338,13 +1713,21 @@ void setItem(){
   itm[16].itm_x = 2;
   itm[16].itm_y = 3;
   itm[16].itm_z = 12;
+  strcpy(itm[16].comm1,"煙草の喫煙する際に出た灰を");
+  strcpy(itm[16].comm2,"入れるためののもの");
+  strcpy(itm[16].comm3,"明治時代では小学生でもタバコが吸えた");
+
   //13F.item
-  strcpy(itm[17].itm_name,"ハンマー");
+  strcpy(itm[17].itm_name,"ショックレスハンマー");
   itm[17].point = 2;
   itm[17].main_itm = 0;
   itm[17].itm_x = 2;
   itm[17].itm_y = 1;
   itm[17].itm_z = 13;
+  strcpy(itm[17].comm1,"物を打ち付けたり、壊すために使う");
+  strcpy(itm[17].comm2,"重りの移動によって反動を吸収し");
+  strcpy(itm[17].comm3,"衝撃を吸収する");
+
   //14F.item
   strcpy(itm[18].itm_name,"塩");
   itm[18].point = 2;
@@ -1352,6 +1735,10 @@ void setItem(){
   itm[18].itm_x = 3;
   itm[18].itm_y = 0;
   itm[18].itm_z = 14;
+  strcpy(itm[18].comm1,"料理、魔除けに使用される");
+  strcpy(itm[18].comm2,"とてもしょっぱく");
+  strcpy(itm[18].comm3,"ナメクジの天敵");
+
 
   strcpy(itm[19].itm_name,"ウォシュレット");
   itm[19].point = 2;
@@ -1359,38 +1746,49 @@ void setItem(){
   itm[19].itm_x = 3;
   itm[19].itm_y = 3;
   itm[19].itm_z = 14;
+  strcpy(itm[19].comm1,"尻を洗浄する");
+  strcpy(itm[19].comm2,"水圧が大きいと");
+  strcpy(itm[19].comm3,"とてもびっくりする");
+
   //15F.item
   strcpy(itm[20].itm_name,"AV");
   itm[20].point = 8;
   itm[20].main_itm = 0;
-  itm[20].itm_x = 4;
-  itm[20].itm_y = 1;
+  itm[20].itm_x = 3;
+  itm[20].itm_y = 2;
   itm[20].itm_z = 16;
+  strcpy(itm[20].comm1,"ミラー号収録");
+  strcpy(itm[20].comm2,"様々なトラブルを招く");
+  strcpy(itm[20].comm3,"取扱注意");
+
   //17F.item
 }
-
 //鏡のコメントを設定する
 void setMirrorComment(){
   //1F - 1番目のトイレのコメント
   strcpy(mirror[0][0].mirr_comment,"だいぶ汚れている");
   strcpy(mirror[0][1].mirr_comment,"自分の顔が映っている...");
-  strcpy(mirror[1][0].mirr_comment,"「N」と書いてある..なんやこれ...");
+  strcpy(mirror[1][0].mirr_comment,"「*豚（トン）」何かのヒントだろうか.");
   strcpy(mirror[1][1].mirr_comment,"この鏡めっちゃ曇ってる...");
   strcpy(mirror[2][0].mirr_comment,"ハンドソープ切れてる.");
   strcpy(mirror[3][0].mirr_comment,"自分の顔が映っている...");
-  strcpy(mirror[4][0].mirr_comment,"隣の洗面台は暗号を入力すると何か起こるみたいだ...");
-  strcpy(mirror[5][1].mirr_comment,"「HaHaHa」と書いてある..なんやこれ");
+  strcpy(mirror[4][0].mirr_comment,"「分からなければヒントを探せ」と書いてある");
+  strcpy(mirror[4][1].mirr_comment,"");
+  strcpy(mirror[5][1].mirr_comment,"「尖っている」何かのヒントだろうか.");
   strcpy(mirror[6][0].mirr_comment,"この鏡めっちゃ割れてる..");
   strcpy(mirror[7][0].mirr_comment,"鏡に血が付いている...");
   strcpy(mirror[7][1].mirr_comment,"ｻｰｰｰｰ....背後に人影のようなものが通ったような気がした..");
   strcpy(mirror[8][0].mirr_comment,"毛がすげえ!!!!");
   strcpy(mirror[8][1].mirr_comment,"自分の顔見てみろブス！！と書いてある...");
-  strcpy(mirror[9][0].mirr_comment,"「Su」と書いてある...なんやこれ");
+  strcpy(mirror[9][0].mirr_comment,"「**離婚(リコン)」何かのヒントだろうか.");
   strcpy(mirror[9][1].mirr_comment,"自分の顔が映っている");
   strcpy(mirror[10][1].mirr_comment,"おれの顔マジ汚なくね？・・・");
   strcpy(mirror[11][0].mirr_comment,"ハンドソープ切れてる..");
   strcpy(mirror[11][1].mirr_comment,"鏡がとても曇っている");
-  strcpy(mirror[13][1].mirr_comment,"「Ku」と書いてある、なんやこれ..");
+  strcpy(mirror[12][0].mirr_comment,"蛇口やレバーがやけにキレイだ...");
+  strcpy(mirror[13][1].mirr_comment,"「絶対食べたことある」何かのヒントだろうか.");
+  strcpy(mirror[14][0].mirr_comment,"「 * + ** 」......？");
+  strcpy(mirror[14][1].mirr_comment,"丁寧に塩が盛られている");
 }
 
 char coll_frame[23][64] = {" -"," -"," -"," -"," -"," -",
@@ -1510,6 +1908,36 @@ void to17f(){
   strcpy(map_frame[8][3],"❍  ");
   showFloor(16);
   getchar();
+  printf("  壁に何か書いてある・・・\n  「このフロアには幻のビデオがが存在する・・・・\n  落とし穴だらけなので気を付けろ\n  ヒントはない・・・・さあ・・・・行ってこい！！！」 ");
+  getchar();
+}
+
+int GetRandom(int min,int max){
+	return min + (int)(rand()*(max-min+1.0)/(1.0+RAND_MAX));
+}
+
+int generateProbability(int percent){
+	int tmp = GetRandom(1,100);
+	if (tmp < percent) {
+		return 1;
+	}
+	return 0;
+}
+
+void changePlayerNum(){
+	//lowを選んだ時
+    if(test_hl == 0){
+      while(player_num<dealer_num){
+			player_num = GetRandom(1,14);
+		  }
+	  }
+	//highを選んだ時
+    if(test_hl == 1){
+      while(player_num>dealer_num){
+        player_num = GetRandom(1,14);
+      }
+    }
+
 }
 
 //---------------------------------------------------
