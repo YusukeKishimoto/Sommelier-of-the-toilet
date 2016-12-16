@@ -1428,7 +1428,7 @@ void checkMirrorComment(){
 void toElevate(){
   int fl;
   system("clear");
-  printf("\n -- F \n");
+  printf("\n%dF \n",somm.now_floor);
   printf("   _  _                 _  _  \n");
   printf("   ▬  ▬  _  _  _  _  _  ▬  ▬  \n");
   printf("   ┏┿━――――――――――――――――――――― 、 \n");
