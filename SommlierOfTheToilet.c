@@ -13,40 +13,45 @@ int getch();
 void toTitle();
 void toOpening();
 
+//丸山
 void updateTime();
 
+//高橋
 void toRules();
 void showFloor(int fl_num);
 void showCollection();
 
+//丸山
 void playHiAndLow();
 
+//岸本
 void loadFloorData();
 void setFloorData(int fl_num,int pattern);
 void moveSommelier(char c);
 void setSommelier(int fl_num);
+//高橋 武川
 void setObject(int fl_num);
 void setToiCommLock();
 void setItem();
 void setMirrorComment();
-
+//岸本
 void clearFloor();
 void clearHasItem();
-
+//岸本
 int getToiretIn(int fl_num, int x, int y);
 int getToiretWarp(int fl_num, int x, int y);
 int getToiretLock(int fl_num, int x, int y);
 int getToiretNumber(int x, int y);
-
+//丸山
 int generateProbability(int percent);
 void changePlayerNum();
 int GetRandom(int min,int max);
-
+//岸本
 void checkEvent();
 void checkItem();
 void checkMirrorComment();
-
 void toElevate();
+//武川
 void toGoal();
 void to17f();
 //void toTest();
@@ -673,6 +678,14 @@ void moveSommelier(char c){
     case 'w':
     //移動先がトイレの場合
     if(strcmp(map_frame[somm.now_y-1][somm.now_x],"⊡  ") == 0){
+      //かつ今いるところがトイレの時
+      if(strcmp(map_tmp,"⊡  ") == 0){
+        system("clear");
+        showFloor(somm.now_floor);
+        printf("   トイレからトイレには移動できない！(Press enter key)");
+        getchar();
+        break;
+      }
       if(getToiretIn(somm.now_floor, somm.now_x, somm.now_y-1) == 7){
         system("clear");
         showFloor(somm.now_floor);
@@ -686,6 +699,11 @@ void moveSommelier(char c){
           somm.pre_x = somm.now_x;
           somm.now_y--;
         }
+      }else{
+        system("clear");
+        showFloor(somm.now_floor);
+        printf("   その方向からトイレには入れない！(Press enter key)");
+        getchar();
       }
       break;
     }
@@ -698,6 +716,11 @@ void moveSommelier(char c){
         somm.pre_x = somm.now_x;
         somm.pre_y = somm.now_y;
         somm.now_y--;
+      }else{
+        system("clear");
+        showFloor(somm.now_floor);
+        printf("   その方向から出ることはできない！(Press enter key)");
+        getchar();
       }
       break;
     }
@@ -716,6 +739,13 @@ void moveSommelier(char c){
     case 'a':
     //移動先がトイレの場合
     if(strcmp(map_frame[somm.now_y][somm.now_x-1],"⊡  ") == 0){
+      if(strcmp(map_tmp,"⊡  ") == 0){
+        system("clear");
+        showFloor(somm.now_floor);
+        printf("   トイレからトイレには移動できない！(Press enter key)");
+        getchar();
+        break;
+      }
       if(getToiretIn(somm.now_floor, somm.now_x-1, somm.now_y) == 6){
         system("clear");
         showFloor(somm.now_floor);
@@ -729,6 +759,11 @@ void moveSommelier(char c){
           somm.pre_y = somm.now_y;
           somm.now_x-- ;
         }
+      }else{
+        system("clear");
+        showFloor(somm.now_floor);
+        printf("   その方向からトイレには入れない！(Press enter key)");
+        getchar();
       }
       break;
     }
@@ -741,6 +776,11 @@ void moveSommelier(char c){
         somm.pre_x = somm.now_x;
         somm.pre_y = somm.now_y;
         somm.now_x--;
+      }else{
+        system("clear");
+        showFloor(somm.now_floor);
+        printf("   その方向から出ることはできない！(Press enter key)");
+        getchar();
       }
       break;
     }
@@ -760,6 +800,13 @@ void moveSommelier(char c){
     case 's':
     //移動先がトイレの場合
     if(strcmp(map_frame[somm.now_y+1][somm.now_x],"⊡  ") == 0){
+      if(strcmp(map_tmp,"⊡  ") == 0){
+        system("clear");
+        showFloor(somm.now_floor);
+        printf("   トイレからトイレには移動できない！(Press enter key)");
+        getchar();
+        break;
+      }
       if(getToiretIn(somm.now_floor, somm.now_x, somm.now_y+1) == 8){
         system("clear");
         showFloor(somm.now_floor);
@@ -773,6 +820,11 @@ void moveSommelier(char c){
           somm.pre_x = somm.now_x;
           somm.now_y++;
         }
+      }else{
+        system("clear");
+        showFloor(somm.now_floor);
+        printf("   その方向からトイレには入れない！(Press enter key)");
+        getchar();
       }
       break;
     }
@@ -785,6 +837,11 @@ void moveSommelier(char c){
         somm.pre_x = somm.now_x;
         somm.pre_y = somm.now_y;
         somm.now_y++;
+      }else{
+        system("clear");
+        showFloor(somm.now_floor);
+        printf("   その方向から出ることはできない！(Press enter key)");
+        getchar();
       }
       break;
     }
@@ -804,6 +861,13 @@ void moveSommelier(char c){
     case 'd':
     //移動先がトイレの場合
     if(strcmp(map_frame[somm.now_y][somm.now_x+1],"⊡  ") == 0){
+      if(strcmp(map_tmp,"⊡  ") == 0){
+        system("clear");
+        showFloor(somm.now_floor);
+        printf("   トイレからトイレには移動できない！(Press enter key)");
+        getchar();
+        break;
+      }
       if(getToiretIn(somm.now_floor, somm.now_x+1, somm.now_y) == 9){
         system("clear");
         showFloor(somm.now_floor);
@@ -817,6 +881,11 @@ void moveSommelier(char c){
           somm.pre_y = somm.now_y;
           somm.now_x++;
         }
+      }else{
+        system("clear");
+        showFloor(somm.now_floor);
+        printf("   その方向からトイレには入れない！(Press enter key)");
+        getchar();
       }
       break;
     }
@@ -829,6 +898,11 @@ void moveSommelier(char c){
         somm.pre_x = somm.now_x;
         somm.pre_y = somm.now_y;
         somm.now_x++;
+      }else{
+        system("clear");
+        showFloor(somm.now_floor);
+        printf("   その方向から出ることはできない！(Press enter key)");
+        getchar();
       }
       break;
     }
