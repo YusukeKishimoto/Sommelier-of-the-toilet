@@ -381,7 +381,7 @@ void updateTime(){
   if(second>=60){
     second = 0;
   }
-  if(limit_time>10 && f17_flag ==0){
+  if(limit_time>600 && f17_flag ==0){
       f17_flag = 1;
       printf("  11階から大きな音がした...あの窪みだろうか...  ");
       printf("(Press enter key)");
